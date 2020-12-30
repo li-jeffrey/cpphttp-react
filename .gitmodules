@@ -1,0 +1,9 @@
+[submodule "deps/uWebSockets"]
+	path = deps/uWebSockets
+	url = https://github.com/uNetworking/uWebSockets.git
+[submodule "deps/spdlog"]
+	path = deps/spdlog
+	url = https://github.com/gabime/spdlog.git
+[submodule "deps/jsoncpp"]
+	path = deps/jsoncpp
+	url = https://github.com/open-source-parsers/jsoncpp.git
