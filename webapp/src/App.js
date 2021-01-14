@@ -18,19 +18,18 @@ async function saveProduct([action, product]) {
     switch (action) {
         case 'create':
             response = await fetch(`${BASE_URL}/products/create`, { method: 'POST', body: JSON.stringify(product) });
-            if (!response.ok) throw new Error(response.statusText);
             break;
         case 'update':
             response = await fetch(`${BASE_URL}/products/update`, { method: 'POST', body: JSON.stringify(product) });
-            if (!response.ok) throw new Error(response.statusText);
             break;
         case 'delete':
             response = await fetch(`${BASE_URL}/products/delete?id=${product["Id"]}`, { method: 'POST' });
-            if (!response.ok) throw new Error(response.statusText);
             break;
         default:
             throw new Error("Unknown action: " + action);
     }
+
+    if (!response.ok) throw new Error(response.statusText);
 }
 
 function App() {

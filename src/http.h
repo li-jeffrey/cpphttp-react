@@ -27,17 +27,6 @@ class JsonController : public RequestHandler<HttpResponse, HttpRequest> {
 private:
   std::unique_ptr<Json::StreamWriter> writer;
   std::unique_ptr<Json::CharReader> reader;
-  std::vector<char> buffer;
-
-  static void internalTryEnd(HttpResponse *res, const char *str,
-                             size_t remaining) {
-    if (!res->tryEnd(str, remaining).first) {
-      res->onWritable([=](int offset) {
-        internalTryEnd(res, str + offset, remaining - offset);
-        return true;
-      });
-    }
-  }
 
 protected:
   JsonController() {
@@ -50,26 +39,30 @@ protected:
 
   void parseJson(HttpResponse *res,
                  std::function<void(HttpResponse *res, Json::Value &json)> cb) {
-    this->buffer.clear();
+    auto buffer = new std::vector<char>();
     res->onData([=](std::string_view chunk, bool isEnd) {
-      this->buffer.insert(this->buffer.end(), chunk.begin(), chunk.end());
+      buffer->insert(buffer->end(), chunk.begin(), chunk.end());
       if (isEnd) {
-        if (this->buffer.empty()) {
+        if (buffer->empty()) {
           res->writeStatus("400 Bad Request")->end("Missing request body");
           return;
         }
 
         Json::Value json;
         std::string errs;
-        if (this->reader->parse(&this->buffer.front(), &this->buffer.back() + 1,
+        if (this->reader->parse(&buffer->front(), &buffer->back() + 1,
                                 &json, &errs)) {
           cb(res, json);
         } else {
           res->writeStatus("400 Bad Request")->end(errs);
         }
+        
+        delete buffer;
       }
     });
-    res->onAborted([]() {});
+    res->onAborted([=]() {
+        delete buffer;
+    });
   }
 
   void end(HttpResponse *res) {
@@ -85,11 +78,10 @@ protected:
     }
     std::ostringstream str;
     this->writer->write(json, &str);
-    auto strdata = str.str();
 
     res->writeHeader("Access-Control-Allow-Origin", "*")
-        ->writeHeader("Content-Type", "application/json");
-    internalTryEnd(res, strdata.data(), strdata.size());
+        ->writeHeader("Content-Type", "application/json")
+        ->end(str.str());
   }
 };
 

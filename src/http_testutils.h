@@ -44,8 +44,6 @@ public:
     return this;
   }
 
-  void onWritable(std::function<void(int offset)> cb) { (void)cb; }
-
   void onData(std::function<void(std::string_view chunk, bool isEnd)> cb) {
     if (postData.empty()) {
       return;
@@ -60,13 +58,6 @@ public:
   }
 
   void onAborted(std::function<void()> cb) {}
-
-  std::pair<bool, bool> tryEnd(std::string_view data, size_t size) {
-    assert(!ended);
-    this->body << data;
-    this->ended = true;
-    return {true, true};
-  }
 
   void end(std::string_view data = {}) {
     assert(!ended);
