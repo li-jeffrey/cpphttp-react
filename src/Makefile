@@ -21,7 +21,7 @@ APP_NAME=cpphttp-react
 APP_OBJ=server.o products.o
 
 TEST_APP_NAME=cpphttp-react-test
-TEST_APP_OBJ=net_test.o products_test.o products.o
+TEST_APP_OBJ=http_test.o products_test.o products.o
 
 all: $(APP_NAME)
 

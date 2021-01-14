@@ -12,6 +12,7 @@ public:
   MOCK_METHOD(std::string_view, getUrl, ());
   MOCK_METHOD(std::string_view, getMethod, ());
   MOCK_METHOD(std::string_view, getParameter, (unsigned int));
+  MOCK_METHOD(std::string_view, getQuery, ());
   MOCK_METHOD(std::string_view, getQuery, (std::string_view));
 };
 
@@ -55,7 +56,10 @@ public:
     }
 
     cb(postData.back(), true);
+    return;
   }
+
+  void onAborted(std::function<void()> cb) {}
 
   std::pair<bool, bool> tryEnd(std::string_view data, size_t size) {
     assert(!ended);

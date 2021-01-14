@@ -14,20 +14,20 @@ struct Product {
   std::string Description;
 
   friend std::ostream &operator<<(std::ostream &, const Product &);
+  friend Json::Value &operator<<(Json::Value &, const Product &);
+  friend Json::Value &operator<<(Json::Value &, const std::vector<Product> &);
+  friend Json::Value &operator>>(Json::Value &, Product &);
+
   bool operator==(const Product &p) const;
   bool operator!=(const Product &p) const;
 };
-
-void serialize(const Product &, Json::Value &);
-void serialize(const std::vector<Product> &, Json::Value &);
 
 class ProductManager {
 public:
   virtual std::vector<Product> getAllProducts() const = 0;
   virtual std::optional<Product> getById(const int &id) const = 0;
 
-  virtual int createProduct(const std::string &name,
-                            const std::string &description) = 0;
+  virtual int createProduct(const Product &) = 0;
   virtual bool updateProduct(const Product &) = 0;
   virtual void deleteProduct(const int &id) = 0;
 };
@@ -42,9 +42,8 @@ public:
   virtual std::vector<Product> getAllProducts() const override;
   virtual std::optional<Product> getById(const int &id) const override;
 
-  virtual int createProduct(const std::string &name,
-                            const std::string &description) override;
-  virtual bool updateProduct(const Product &pdt) override;
+  virtual int createProduct(const Product &) override;
+  virtual bool updateProduct(const Product &) override;
   virtual void deleteProduct(const int &id) override;
 };
 

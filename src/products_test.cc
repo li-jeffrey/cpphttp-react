@@ -1,35 +1,37 @@
 #include "products.h"
 #include <gtest/gtest.h>
 
+namespace Products {
+
 TEST(Products, ProductEquality) {
-  Products::Product pdt{1, "Volvo", "SUV"};
-  Products::Product pdt2{2, "Toyota", "Camry"};
+  Product pdt{1, "Volvo", "SUV"};
+  Product pdt2{2, "Toyota", "Camry"};
   ASSERT_EQ(pdt, pdt);
   ASSERT_NE(pdt, pdt2);
 }
 
 TEST(Products, ProductOStream) {
   std::ostringstream os;
-  Products::Product pdt{1, "Volvo", "SUV"};
+  Product pdt{1, "Volvo", "SUV"};
   os << pdt;
   ASSERT_EQ(os.str(), "Product [Id=1, Name='Volvo', Description='SUV']");
 }
 
 TEST(Products, SerializeOneProduct) {
-  Products::Product pdt{1, "Volvo", "SUV"};
+  Product pdt{1, "Volvo", "SUV"};
   Json::Value root;
-  Products::serialize(pdt, root);
+  root << pdt;
   ASSERT_EQ(root["Id"].asInt(), 1);
   ASSERT_EQ(root["Name"].asString(), "Volvo");
   ASSERT_EQ(root["Description"].asString(), "SUV");
 }
 
 TEST(Products, SerializeManyProducts) {
-  Products::Product pdt{1, "Volvo", "SUV"};
-  Products::Product pdt2{2, "Toyota", "Camry"};
-  std::vector<Products::Product> pdts{pdt, pdt2};
+  Product pdt{1, "Volvo", "SUV"};
+  Product pdt2{2, "Toyota", "Camry"};
+  std::vector<Product> pdts{pdt, pdt2};
   Json::Value root;
-  Products::serialize(pdts, root);
+  root << pdts;
   ASSERT_TRUE(root.isArray());
   ASSERT_EQ(root.size(), (unsigned int)2);
 
@@ -44,10 +46,23 @@ TEST(Products, SerializeManyProducts) {
   ASSERT_EQ(value2["Description"].asString(), "Camry");
 }
 
+TEST(Products, DeserializeJson) {
+  Json::Value json;
+  json["Id"] = 1;
+  json["Name"] = "abc";
+  json["Description"] = "def";
+
+  Product pdt;
+  json >> pdt;
+  ASSERT_EQ(pdt.Id, 1);
+  ASSERT_EQ(pdt.Name, "abc");
+  ASSERT_EQ(pdt.Description, "def");
+}
+
 TEST(Products, CreateAndGetProduct) {
-  Products::ProductManagerImpl pm;
-  int id1 = pm.createProduct("Volvo", "SUV");
-  int id2 = pm.createProduct("Toyota", "Camry");
+  ProductManagerImpl pm;
+  int id1 = pm.createProduct(Product{0, "Volvo", "SUV"});
+  int id2 = pm.createProduct(Product{0, "Toyota", "Camry"});
 
   ASSERT_NE(id1, id2);
   ASSERT_EQ(pm.getAllProducts().size(), (size_t)2);
@@ -69,25 +84,27 @@ TEST(Products, CreateAndGetProduct) {
 }
 
 TEST(Products, UpdateProduct) {
-  Products::ProductManagerImpl pm;
-  int id1 = pm.createProduct("Volvo", "SUV");
+  ProductManagerImpl pm;
+  int id1 = pm.createProduct(Product{0, "Volvo", "SUV"});
 
-  ASSERT_TRUE(pm.updateProduct(Products::Product{id1, "Volvo", "Truck"}));
+  ASSERT_TRUE(pm.updateProduct(Product{id1, "Volvo", "Truck"}));
   auto pdt1 = pm.getById(id1);
   ASSERT_TRUE((bool)pdt1);
   ASSERT_EQ(pdt1->Id, id1);
   ASSERT_EQ(pdt1->Name, "Volvo");
   ASSERT_EQ(pdt1->Description, "Truck");
 
-  ASSERT_FALSE(pm.updateProduct(Products::Product{999, "abc", "def"}));
+  ASSERT_FALSE(pm.updateProduct(Product{999, "abc", "def"}));
 }
 
 TEST(Products, DeleteProduct) {
-  Products::ProductManagerImpl pm;
-  int id1 = pm.createProduct("Volvo", "SUV");
-  pm.createProduct("Toyota", "Camry");
+  ProductManagerImpl pm;
+  int id1 = pm.createProduct(Product{0, "Volvo", "SUV"});
+  pm.createProduct(Product{0, "Toyota", "Camry"});
 
   pm.deleteProduct(id1);
   ASSERT_FALSE((bool)pm.getById(id1));
   ASSERT_EQ(pm.getAllProducts().size(), (size_t)1);
 }
+
+} // namespace Products

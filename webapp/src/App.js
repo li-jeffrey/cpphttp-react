@@ -1,62 +1,44 @@
-import { useEffect, useState } from 'react';
+import ProductsPanel from './panels/ProductsPanel';
 import './App.css';
 
-function ProductsTable(props) {
-  const [products, setProducts] = useState([]);
+const BASE_URL = process.env.REACT_APP_API_URL;
 
-  useEffect(() => {
-    fetch("/api/v1/products/all")
-      .then(res => res.json())
-      .then(pdts => setProducts(pdts))
-      .catch(err => props.raiseAlert("GetProducts: " + err));
-  })
+async function getProducts() {
+    const response = await fetch(`${BASE_URL}/products/all`);
+    if (!response.ok) throw new Error(response.statusText);
+    if (response.status === 204) {
+        return [];
+    }
 
-  if (products.length === 0) {
-    return (
-      <div>Nothing to show</div>
-    )
-  }
-
-  const cols = Object.keys(products[0]);
-  return (
-    <div>
-      <table className="pure-table">
-        <thead>
-          <tr>
-            {cols.map(field => <th>{field}</th>)}
-          </tr>
-        </thead>
-        <tbody>
-          {products.map(pdt => (
-            <tr>
-              {cols.map(col => <td>{pdt[col]}</td>)}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  )
+    return await response.json();
 }
 
-function Alerter(props) {
-  if (props.text.length === 0) {
-    return null;
-  }
-
-  return (
-    <h4 className="warning">{props.text}</h4>
-  )
+async function saveProduct([action, product]) {
+    let response;
+    switch (action) {
+        case 'create':
+            response = await fetch(`${BASE_URL}/products/create`, { method: 'POST', body: JSON.stringify(product) });
+            if (!response.ok) throw new Error(response.statusText);
+            break;
+        case 'update':
+            response = await fetch(`${BASE_URL}/products/update`, { method: 'POST', body: JSON.stringify(product) });
+            if (!response.ok) throw new Error(response.statusText);
+            break;
+        case 'delete':
+            response = await fetch(`${BASE_URL}/products/delete?id=${product["Id"]}`, { method: 'POST' });
+            if (!response.ok) throw new Error(response.statusText);
+            break;
+        default:
+            throw new Error("Unknown action: " + action);
+    }
 }
 
 function App() {
-  const [alert, setAlert] = useState('');
-
   return (
     <main>
       <h2>cpphttp-react</h2>
-      <Alerter text={alert}/>
       <hr></hr>
-      <ProductsTable raiseAlert={setAlert}/>
+      <ProductsPanel getFn={getProducts} saveFn={saveProduct}/>
     </main>
   );
 }

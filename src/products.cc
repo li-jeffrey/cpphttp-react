@@ -3,23 +3,34 @@
 
 namespace Products {
 
-void serialize(const Product &product, Json::Value &value) {
-  value["Id"] = product.Id;
-  value["Name"] = product.Name;
-  value["Description"] = product.Description;
-}
-
-void serialize(const std::vector<Product> &products, Json::Value &value) {
-  for (const auto &p : products) {
-    Json::Value obj;
-    serialize(p, obj);
-    value.append(obj);
-  }
-}
-
 std::ostream &operator<<(std::ostream &os, const Product &p) {
   return os << "Product [Id=" << p.Id << ", Name='" << p.Name
             << "', Description='" << p.Description << "']";
+}
+
+Json::Value &operator<<(Json::Value &value, const Product &product) {
+  value["Id"] = product.Id;
+  value["Name"] = product.Name;
+  value["Description"] = product.Description;
+  return value;
+}
+
+Json::Value &operator<<(Json::Value &value,
+                        const std::vector<Product> &products) {
+  for (const auto &p : products) {
+    Json::Value obj;
+    obj << p;
+    value.append(obj);
+  }
+
+  return value;
+}
+
+Json::Value &operator>>(Json::Value &json, Product &p) {
+  p.Id = json["Id"].asInt();
+  p.Name = json["Name"].asString();
+  p.Description = json["Description"].asString();
+  return json;
 }
 
 bool Product::operator==(const Product &p) const {
@@ -47,13 +58,13 @@ std::optional<Product> ProductManagerImpl::getById(const int &id) const {
                                     : std::nullopt;
 }
 
-int ProductManagerImpl::createProduct(const std::string &name,
-                                      const std::string &description) {
+int ProductManagerImpl::createProduct(const Product &pdt) {
   std::unique_lock lock(this->mutex);
   int nextId = ++this->nextId;
-  const auto pdt = Product{nextId, name, description};
-  this->cache[nextId] = pdt;
-  SPDLOG_INFO("Created product: {}", pdt);
+  auto cpy = pdt;
+  cpy.Id = nextId;
+  this->cache[nextId] = cpy;
+  SPDLOG_INFO("Created product: {}", cpy);
   return nextId;
 }
 

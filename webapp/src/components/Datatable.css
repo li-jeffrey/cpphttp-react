@@ -1,0 +1,22 @@
+.datatable-container {
+    width: fit-content;
+    height: fit-content;
+    margin: 1em 0;
+}
+
+.datatable-container > .datatable-title {
+    display: inline-block;
+    margin: 8px auto;
+}
+
+.datatable-container > .datatable-create-btn {
+    float: right;
+}
+
+td > .datatable-edit-btn {
+    background: none;
+    border: none;
+    margin: 0;
+    padding: 0;
+    color: var(--c1);
+}

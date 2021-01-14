@@ -9,12 +9,12 @@
 
 #include "products.h"
 
-namespace Net {
+namespace Http {
 
 template <typename HttpResponse, typename HttpRequest> class RequestHandler {
 public:
   void handleRequest(HttpResponse *res, HttpRequest *req) {
-    SPDLOG_DEBUG("Handle request: {}", req->getUrl());
+    SPDLOG_DEBUG("{} {}", req->getMethod(), req->getUrl());
     doRequest(res, req);
   }
 
@@ -32,7 +32,7 @@ private:
   static void internalTryEnd(HttpResponse *res, const char *str,
                              size_t remaining) {
     if (!res->tryEnd(str, remaining).first) {
-      res->onWritable([&](int offset) {
+      res->onWritable([=](int offset) {
         internalTryEnd(res, str + offset, remaining - offset);
         return true;
       });
@@ -51,7 +51,7 @@ protected:
   void parseJson(HttpResponse *res,
                  std::function<void(HttpResponse *res, Json::Value &json)> cb) {
     this->buffer.clear();
-    res->onData([&](std::string_view chunk, bool isEnd) {
+    res->onData([=](std::string_view chunk, bool isEnd) {
       this->buffer.insert(this->buffer.end(), chunk.begin(), chunk.end());
       if (isEnd) {
         if (this->buffer.empty()) {
@@ -69,21 +69,26 @@ protected:
         }
       }
     });
+    res->onAborted([]() {});
+  }
+
+  void end(HttpResponse *res) {
+    res->writeStatus("204 No Content")
+        ->writeHeader("Access-Control-Allow-Origin", "*")
+        ->end();
   }
 
   void tryEnd(HttpResponse *res, Json::Value &json) {
     if (json.empty()) {
-      res->writeStatus("204 No Content")->end();
+      this->end(res);
       return;
     }
     std::ostringstream str;
     this->writer->write(json, &str);
     auto strdata = str.str();
 
-    res->writeStatus("200 OK")
-        ->writeHeader("Access-Control-Allow-Origin", "*")
+    res->writeHeader("Access-Control-Allow-Origin", "*")
         ->writeHeader("Content-Type", "application/json");
-
     internalTryEnd(res, strdata.data(), strdata.size());
   }
 };
@@ -98,20 +103,34 @@ private:
     auto requestType = req->getMethod();
     auto param = req->getParameter(0);
     if (param == "all" && requestType == "get") {
-      Products::serialize(this->pm->getAllProducts(), json);
+      json << this->pm->getAllProducts();
       this->tryEnd(res, json);
+    } else if (param == "create" && requestType == "post") {
+      this->parseJson(res, [this](auto *res, auto &json) {
+        Products::Product pdt;
+        json >> pdt;
+        this->pm->createProduct(pdt);
+        this->end(res);
+      });
     } else if (param == "update" && requestType == "post") {
       this->parseJson(res, [this](auto *res, auto &json) {
-        Products::Product pdt{json["Id"].asInt(), json["Name"].asString(),
-                              json["Description"].asString()};
+        Products::Product pdt;
+        json >> pdt;
         this->pm->updateProduct(pdt);
-        res->writeStatus("204 No Content")->end();
+        this->end(res);
       });
-    } else if (param == "delete" && requestType == "delete") {
+    } else if (param == "delete" && requestType == "post") {
       auto id = req->getQuery("id");
-      int parsed = std::stoi(std::string(id));
+      int parsed;
+      try {
+        parsed = std::stoi(std::string(id));
+      } catch (const std::exception &) {
+        res->writeStatus("400 Bad Request")->end("Invalid Id");
+        return;
+      }
+
       this->pm->deleteProduct(parsed);
-      res->writeStatus("204 No Content")->end();
+      this->end(res);
     } else {
       res->writeStatus("404 Not Found")->end("Not Found");
     }
@@ -181,4 +200,4 @@ private:
   }
 };
 
-} // namespace Net
+} // namespace Http
